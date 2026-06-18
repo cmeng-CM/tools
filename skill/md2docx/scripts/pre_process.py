@@ -148,12 +148,12 @@ def extract_mermaid_blocks(text):
 
     for i, line in enumerate(lines):
         stripped = line.strip()
-        if stripped.startswith('```mermaid') or stripped == '```mermaid':
+        if re.match(r'^`{3,}mermaid\s*$', stripped):
             in_mermaid = True
             start_idx = i
             mermaid_lines = []
             continue
-        if in_mermaid and stripped == '```':
+        if in_mermaid and re.match(r'^`{3,}$', stripped):
             blocks.append({
                 'start': start_idx,
                 'end': i + 1,  # exclusive

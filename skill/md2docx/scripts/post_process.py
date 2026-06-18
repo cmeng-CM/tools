@@ -206,9 +206,10 @@ def fix_list_spacing(doc):
 # ── Operation 5: Reposition TOC after document title ─────────────────
 
 def reposition_toc_after_title(doc):
-    """Move the TOC (sdt) from the very beginning to after the H1 title,
-    and enable auto-update on document open so the TOC populates without
-    requiring the user to manually right-click → Update Field.
+    """Move the TOC (sdt) from the very beginning to after the first heading
+    (any level — the document title), and enable auto-update on document open
+    so the TOC populates without requiring the user to manually right-click →
+    Update Field.
     """
     body = doc.element.body
 
@@ -220,29 +221,31 @@ def reposition_toc_after_title(doc):
             toc_sdt = sdt
             break
 
+    moved = False
+
     if toc_sdt is not None:
-        # --- Reposition TOC after H1 title ---
+        # --- Reposition TOC after the first heading (any level) ---
         children = list(body)
 
-        # Find first Heading 1
-        h1_idx = None
+        # Find the first heading — pandoc maps # → '1'/Heading1, ## → '2'/Heading2, etc.
+        heading_idx = None
         for i, child in enumerate(children):
             if child.tag == qn('w:p'):
                 pPr = child.find(qn('w:pPr'))
                 if pPr is not None:
                     pStyle = pPr.find(qn('w:pStyle'))
                     if pStyle is not None:
-                        style_id = pStyle.get(qn('w:val'))
-                        if style_id in ('1', '2', 'Heading1', 'Heading 1',
-                                        'heading1', 'heading 1'):
-                            h1_idx = i
+                        style_id = (pStyle.get(qn('w:val')) or '').lower()
+                        if style_id.isdigit() or style_id.startswith('heading'):
+                            heading_idx = i
                             break
 
-        if h1_idx is not None:
+        if heading_idx is not None:
             toc_idx = children.index(toc_sdt)
-            if toc_idx < h1_idx:
+            if toc_idx < heading_idx:
                 body.remove(toc_sdt)
-                body.insert(h1_idx + 1, toc_sdt)
+                body.insert(heading_idx + 1, toc_sdt)
+                moved = True
 
     # --- Enable auto-update of fields on document open ---
     # This tells Word to update the TOC automatically when the document
@@ -254,7 +257,7 @@ def reposition_toc_after_title(doc):
         settings.append(update_fields)
     update_fields.set(qn('w:val'), 'true')
 
-    return toc_sdt is not None
+    return moved
 
 
 # ── Main ────────────────────────────────────────────────────────────
